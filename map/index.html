@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>샛뭍 확대 지도</title>
+<meta name="theme-color" content="#0A0D18">
+<meta name="robots" content="noindex">
+<link rel="icon" href="../icon-192.png">
+<style>
+:root{--ink:#3b2a18;--ui:#F3E6C4;--bg:#0A0D18;--f-ui:"IBM Plex Sans KR",system-ui,sans-serif;--f-han:"Noto Serif KR","Nanum Myeongjo",serif;--sb:max(12px,env(safe-area-inset-bottom,0px));--sr:max(12px,env(safe-area-inset-right,0px));--sl:max(12px,env(safe-area-inset-left,0px))}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ui);font-family:var(--f-ui);overflow:hidden;overscroll-behavior:none;-webkit-user-select:none;user-select:none}
+#v{position:fixed;inset:0;background:#b9ad86}
+.top{position:fixed;left:0;right:0;top:0;z-index:5;display:flex;align-items:center;gap:10px;padding:max(10px,env(safe-area-inset-top,0px)) 14px 14px;background:linear-gradient(rgba(10,13,24,.82),rgba(10,13,24,0));pointer-events:none}
+.top>*{pointer-events:auto}
+.top h1{margin:0;font-family:var(--f-han);font-weight:600;font-size:18px;letter-spacing:.06em;text-shadow:0 1px 6px #000}
+.top small{display:block;font-size:11px;opacity:.8;letter-spacing:.08em;font-weight:400}
+.embed .back{visibility:hidden;width:64px;padding:0}
+.btn{font:600 13px var(--f-ui);padding:8px 14px;border-radius:999px;border:1px solid rgba(243,230,196,.35);background:rgba(10,13,24,.75);color:var(--ui);cursor:pointer;text-decoration:none}
+.maker{margin-left:auto;font:600 11px var(--f-ui);padding:5px 10px;border-radius:999px;background:#7a1f14;color:#fff;letter-spacing:.06em}
+/* 확대 막대 */
+.zbar{position:fixed;right:var(--sr);bottom:calc(var(--sb) + 112px);z-index:5;width:44px;display:grid;justify-items:center;gap:8px}
+.zbar button{width:44px;height:44px;border-radius:50%;border:1px solid rgba(243,230,196,.35);background:rgba(10,13,24,.78);color:var(--ui);font:600 22px/1 var(--f-ui);cursor:pointer;display:grid;place-items:center;padding:0}
+.track{position:relative;width:8px;height:150px;border-radius:8px;background:rgba(10,13,24,.55);border:1px solid rgba(243,230,196,.3);cursor:pointer;touch-action:none}
+.track i{position:absolute;left:0;right:0;bottom:0;border-radius:8px;background:linear-gradient(#e2c27a,#b0893f)}
+.track b{position:absolute;left:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:#f3e6c4;border:2px solid #7a5a2a;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.track s{position:absolute;left:14px;width:6px;height:1px;background:rgba(243,230,196,.6);text-decoration:none}
+.home{position:fixed;right:var(--sr);bottom:calc(var(--sb) + 56px);z-index:5}
+.home button{width:44px;height:44px;border-radius:50%;border:1px solid rgba(243,230,196,.35);background:rgba(10,13,24,.78);color:var(--ui);cursor:pointer;display:grid;place-items:center;padding:0}
+.home svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.fogbtn{position:fixed;right:var(--sr);bottom:var(--sb);z-index:5}
+.zbadge{position:fixed;right:calc(var(--sr) + 56px);bottom:calc(var(--sb) + 190px);z-index:6;font:700 15px var(--f-ui);padding:8px 12px;border-radius:10px;background:rgba(10,13,24,.85);color:var(--ui);opacity:0;transition:opacity .4s;pointer-events:none;white-space:nowrap;text-align:right}
+.zbadge small{display:block;font-weight:400;font-size:11px;opacity:.8}
+.zbadge.on{opacity:1;transition:opacity .1s}
+.compass{position:fixed;left:var(--sl);bottom:calc(var(--sb) + 54px);z-index:4;width:84px;height:84px;pointer-events:none;filter:drop-shadow(0 1px 3px rgba(0,0,0,.5))}
+.compass img{width:100%;height:100%;transform:rotate(-30deg)}
+.scale{position:fixed;left:var(--sl);bottom:var(--sb);z-index:4;font:600 11px var(--f-ui);color:var(--ink);background:rgba(239,226,194,.9);border:1px solid rgba(59,42,24,.45);border-radius:6px;padding:5px 8px 4px;transition:box-shadow .3s}
+.scale.flash{box-shadow:0 0 0 3px rgba(226,194,122,.8)}
+.scale .bar{height:6px;border:2px solid var(--ink);border-top:0;margin-bottom:3px;background:linear-gradient(90deg,var(--ink) 50%,transparent 50%) 0 100%/100% 2px no-repeat;transition:width .15s}
+.legend{position:fixed;left:var(--sl);bottom:calc(var(--sb) + 146px);z-index:4;font:600 10px var(--f-ui);color:var(--ink);background:rgba(239,226,194,.9);border:1px solid rgba(59,42,24,.45);border-radius:6px;padding:5px 8px;display:grid;gap:3px}
+.legend i{display:block;width:96px;height:8px;border-radius:2px;background:linear-gradient(90deg,#e8d3a3,#cdb588,#a8875c)}
+.legend span{display:flex;justify-content:space-between}
+/* 지명(벡터 글씨) */
+.lbl{pointer-events:none;white-space:nowrap;font-family:var(--f-han);font-weight:700;transform:translate(-50%,-50%);text-shadow:0 0 3px #f1e3bf,0 0 3px #f1e3bf,0 0 6px #f1e3bf,0 0 9px #f1e3bf;transition:opacity .35s;display:flex;align-items:center;gap:6px}
+.lbl.k-나라{font-size:clamp(17px,2.3vw,24px);color:#5a1f14;letter-spacing:.22em}
+.lbl.k-도시{font-size:15px;color:#3b2a18;letter-spacing:.08em}
+.lbl.k-고을{font-size:13px;color:#3b2a18;letter-spacing:.04em;font-weight:600}
+.lbl .dot{display:inline-block;border-radius:50%;background:#5a1f14;box-shadow:0 0 0 2px #f1e3bf}
+.lbl.k-도시 .dot{width:9px;height:9px}
+.lbl.k-고을 .dot{width:6px;height:6px;background:#3b2a18}
+.lbl.k-나라 .dot{display:none}
+.lbl.fogged{visibility:hidden!important}
+body.nofog .lbl.fogged{visibility:visible!important}
+.lbl.off{opacity:0}
+/* 핀: 지점(마을·고개 등)은 크기 0인 닻을 정확한 자리에 꽂고, 점의 가운데가 닻 위에 오게 한다. 글씨는 점 오른쪽에 붙는다. 확대해도 점은 움직이지 않는다(절대 규칙) */
+.pin{position:relative;width:0;height:0;pointer-events:none;transition:opacity .35s}
+.pin .dot{position:absolute;border-radius:50%;background:#5a1f14;box-shadow:0 0 0 2px #f1e3bf}
+.pin.k-주요 .dot{width:10px;height:10px;left:-5px;top:-5px}
+.pin.k-보통 .dot{width:8px;height:8px;left:-4px;top:-4px;background:#3b2a18}
+.pin.k-작은 .dot{width:5px;height:5px;left:-2.5px;top:-2.5px;background:#3b2a18;box-shadow:0 0 0 1.5px #f1e3bf}
+.pin .t{position:absolute;left:9px;top:0;transform:translateY(-50%);transition:opacity .2s;white-space:nowrap;font-family:var(--f-han);font-weight:700;color:#3b2a18;text-shadow:0 0 3px #f1e3bf,0 0 3px #f1e3bf,0 0 6px #f1e3bf,0 0 9px #f1e3bf}
+.pin.k-주요 .t{font-size:15px;letter-spacing:.08em}
+.pin.k-보통 .t{font-size:13px;letter-spacing:.04em;font-weight:600}
+.pin.k-작은 .t{font-size:11px;font-weight:600;opacity:.85}
+.pin.hidedot{visibility:hidden!important}
+.pin.fogged{visibility:hidden!important}
+body.nofog .pin.fogged{visibility:visible!important}
+.pin.off{opacity:0}
+.pin.side-l .t{left:auto;right:9px}
+.pin.side-u .t{left:0;top:-9px;transform:translate(-50%,-100%)}
+.pin.side-d .t{left:0;top:9px;transform:translate(-50%,0)}
+.pin.crowd .t,.pin.notext .t{opacity:0}
+.hint{position:fixed;left:50%;top:calc(max(10px,env(safe-area-inset-top,0px)) + 64px);transform:translateX(-50%);z-index:6;font-size:12px;padding:7px 14px;border-radius:999px;background:rgba(10,13,24,.8);color:var(--ui);transition:opacity .6s;pointer-events:none;white-space:nowrap}
+.hint.gone{opacity:0}
+.navigator{border:1px solid rgba(59,42,24,.6)!important;border-radius:6px;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+@media (max-width:520px){.compass{width:68px;height:68px}.legend{bottom:calc(var(--sb) + 126px)}.track{height:120px}}
+/* 앱·웹 안에 작게 넣을 때(mini): 확대 막대·범례·작은 지도·제목을 빼고 손가락·휠로만 다룬다. 오른쪽 아래 전체 화면 단추는 바깥 페이지가 둔다 */
+.mini .top,.mini .zbar,.mini .home,.mini .legend,.mini .navigator,.mini .hint,.mini .fogbtn{display:none!important}
+.mini .compass{width:52px;height:52px;bottom:calc(var(--sb) + 40px)}
+/* 강 이름: 물이 흐르는 방향을 따라 쓴다 */
+#rl{position:fixed;inset:0;z-index:3;pointer-events:none;overflow:visible}
+#rl text{dominant-baseline:central;font-family:var(--f-han);font-weight:700;font-size:14px;letter-spacing:.35em;fill:#2f4a6e;paint-order:stroke;stroke:#f1e3bf;stroke-width:4px;stroke-linejoin:round}
+</style>
+</head>
+<body>
+<svg id="rl" aria-hidden="true"></svg>
+<div id="v" aria-label="샛뭍 지도. 손가락 두 개로 벌리거나 두 번 눌러 확대합니다."></div>
+<div class="top">
+  <a class="btn back" href="../" aria-label="칠성록으로 돌아가기">← 칠성록</a>
+  <h1>샛뭍<small>주작 · 셋째 땅</small></h1>
+</div>
+<div class="compass" aria-hidden="true"><img src="compass.png" alt=""></div>
+<div class="legend" aria-label="고도"><b>고도</b><i></i><span><span>낮음</span><span>높음</span></span></div>
+<div class="scale" id="scale" aria-live="polite"><div class="bar" id="sbar"></div><span id="stxt">—</span></div>
+<div class="zbar">
+  <button type="button" id="zin" aria-label="확대">+</button>
+  <div class="track" id="track" role="slider" aria-label="확대 정도" aria-valuemin="1" tabindex="0"><i id="tfill"></i><b id="thumb"></b></div>
+  <button type="button" id="zout" aria-label="축소">−</button>
+</div>
+<div class="home"><button type="button" id="home" aria-label="샛뭍 전체 보기"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div>
+<div class="zbadge" id="zbadge"></div>
+<p class="hint" id="hint">두 손가락으로 벌리거나 두 번 눌러 확대</p>
+<script src="osd.min.js"></script>
+<script>
+(function(){
+  var Q=new URLSearchParams(location.search),S=8188,R_OPEN=400; /* 안개가 걷히는 반경: 이야기에 나온 곳에서 약 200km(400px) */
+  if(Q.has("embed"))document.body.classList.add("embed");
+  if(Q.has("mini"))document.body.classList.add("mini");
+  /* 제작자 모드: ?maker=jh7dippers 로 한 번 열면 이 기기에 기억된다. ?maker=off 로 끈다. */
+  var MAKER=false;try{if(Q.get("maker")==="off")localStorage.removeItem("dippers-maker");else if(Q.get("maker")==="jh7dippers")localStorage.setItem("dippers-maker","1");MAKER=localStorage.getItem("dippers-maker")==="1";}catch(e){}
+  var v=OpenSeadragon({id:"v",tileSources:"satmut.dzi",prefixUrl:"",showNavigationControl:false,
+    showNavigator:!Q.has("mini"),navigatorPosition:"TOP_RIGHT",navigatorSizeRatio:.13,navigatorAutoFade:false,navigatorBackground:"#b9ad86",navigatorTop:"64px",navigatorRight:"10px",
+    maxZoomPixelRatio:2.4,visibilityRatio:1,constrainDuringPan:true,
+    animationTime:.8,springStiffness:8,zoomPerScroll:1.35,gestureSettingsTouch:{pinchRotate:false,flickEnabled:true},
+    gestureSettingsMouse:{clickToZoom:false,dblClickToZoom:true},blendTime:.15});
+  var storyView=null,viewDone=false,touched=false,DATA=null,labels=[],rivers=[],KM=0.499,minZ=null,maxZ=null,homeRect=null,fogItem=null,FOGA=null;
+  var badge=document.getElementById("zbadge"),scaleEl=document.getElementById("scale"),thumb=document.getElementById("thumb"),tfill=document.getElementById("tfill"),track=document.getElementById("track"),RL=document.getElementById("rl");
+  if(MAKER){var m=document.createElement("span");m.className="maker";m.textContent="제작자";document.querySelector(".top").appendChild(m);}
+  var item=function(){return v.world.getItemAt(0)};
+  /* 안개: 이야기에 나온 곳(공개된 장소)마다 반경 약 200km만 걷힌다. 공개된 장소가 없으면 예전 안개 그림을 쓴다 */
+  function makeFog(pts,done){
+    if(!pts.length){var im=new Image();im.onload=function(){var c=document.createElement("canvas");c.width=im.width;c.height=im.height;c.getContext("2d").drawImage(im,0,0);done(c,"fog.png")};im.src="fog.png";return;}
+    var G=1024,k=G/S,c=document.createElement("canvas");c.width=c.height=G;var g=c.getContext("2d");
+    g.fillStyle="rgba(236,228,206,.95)";g.fillRect(0,0,G,G);
+    var seed=7;function r(){seed=(seed*16807)%2147483647;return seed/2147483647}
+    for(var i=0;i<900;i++){var x=r()*G,y=r()*G,rr=8+r()*60,gr=g.createRadialGradient(x,y,0,x,y,rr),t=r();gr.addColorStop(0,t<.5?"rgba(250,246,234,.35)":"rgba(214,204,178,.28)");gr.addColorStop(1,"rgba(0,0,0,0)");g.fillStyle=gr;g.fillRect(x-rr,y-rr,rr*2,rr*2);}
+    g.globalCompositeOperation="destination-out";
+    pts.forEach(function(p){var x=p.x*k,y=p.y*k,R=R_OPEN*k,gr=g.createRadialGradient(x,y,R*.55,x,y,R);gr.addColorStop(0,"rgba(0,0,0,1)");gr.addColorStop(1,"rgba(0,0,0,0)");g.fillStyle=gr;g.beginPath();g.arc(x,y,R,0,6.3);g.fill();});
+    g.globalCompositeOperation="source-over";done(c,c.toDataURL("image/png"));}
+  function inOpen(x,y){if(!FOGA)return true;var px=Math.min(FOGA.w-1,Math.floor(x*FOGA.w/S)),py=Math.min(FOGA.w-1,Math.floor(y*FOGA.w/S));return FOGA.d[(py*FOGA.w+px)*4+3]<100;}
+  var started=false;
+  function setup(){
+    if(!DATA||!v.world.getItemCount()||started)return;started=true;
+    var story=DATA.names.filter(function(n){return n.src==="ledger"});
+    makeFog(story,function(c,url){FOGA={w:c.width,d:c.getContext("2d").getImageData(0,0,c.width,c.height).data};
+      v.addTiledImage({tileSource:{type:"image",url:url},x:0,y:0,width:1,opacity:1,success:function(e){fogItem=e.item;}});build(story);});
+  }
+  function build(story){
+    var b=DATA.bounds;homeRect=item().imageToViewportRectangle(b[0],b[1],b[2]-b[0],b[3]-b[1]);
+    v.viewport.fitBounds(homeRect,true);var fit=v.viewport.getZoom();
+    minZ=MAKER?fit*0.35:fit;maxZ=v.viewport.getMaxZoom();v.viewport.minZoomLevel=minZ;
+    v.viewport.goHome=function(imm){v.viewport.fitBounds(homeRect,imm)};
+    if(DATA.scale&&DATA.scale.kmPerPx)KM=DATA.scale.kmPerPx;
+    DATA.names.forEach(function(n){var isPin=n.kind!=="나라",el=document.createElement("div");
+      el.className=(isPin?"pin":"lbl")+" k-"+n.kind+(inOpen(n.x,n.y)?"":" fogged");
+      if(isPin){el.innerHTML='<span class="dot"></span><span class="t"></span>';el.querySelector(".t").textContent=n.name;}
+      else el.textContent=n.name;
+      v.addOverlay({element:el,location:item().imageToViewportCoordinates(n.x,n.y),placement:isPin?OpenSeadragon.Placement.TOP_LEFT:OpenSeadragon.Placement.CENTER,checkResize:false});
+      labels.push({el:el,kind:n.kind,ep:n.ep||0});});
+    (DATA.rivers||[]).forEach(function(rv,i){var p=document.createElementNS("http://www.w3.org/2000/svg","path");p.id="rp"+i;p.setAttribute("fill","none");
+      var t=document.createElementNS("http://www.w3.org/2000/svg","text"),tp=document.createElementNS("http://www.w3.org/2000/svg","textPath");
+      tp.setAttribute("href","#rp"+i);tp.setAttribute("startOffset","50%");tp.setAttribute("text-anchor","middle");tp.textContent=rv.name;t.appendChild(tp);RL.appendChild(p);RL.appendChild(t);
+      rivers.push({p:p,t:t,path:rv.path,open:rv.path.some(function(q){return inOpen(q[0],q[1])})});});
+    /* 처음 보는 자리: 지금 이야기가 지나는 곳(공개된 마지막 화의 장소들)을 막대 100km 크기로 */
+    var last=story.length?Math.max.apply(null,story.map(function(n){return n.ep||0})):0,here=story.filter(function(n){return (n.ep||0)===last});
+    if(here.length){var cx=here.reduce(function(a,n){return a+n.x},0)/here.length,cy=here.reduce(function(a,n){return a+n.y},0)/here.length;
+      storyView=function(){if(!v.container.clientWidth)return false;v.viewport.zoomTo(Math.min(maxZ,item().imageToViewportZoom(KM/1.0)),null,true);v.viewport.panTo(item().imageToViewportCoordinates(cx,cy),true);v.viewport.applyConstraints(true);return true;};
+      viewDone=storyView();}
+    [250,100].forEach(function(km){var z=item().imageToViewportZoom(KM/(km/120));var s=document.createElement("s");s.style.bottom=(pos(z)*100)+"%";track.appendChild(s)});
+    upd(false);
+  }
+  fetch("names.json",{cache:"no-cache"}).then(function(r){return r.json()}).then(function(d){DATA=d;setup();});
+  v.addHandler("open",setup);
+  function pos(z){if(!minZ)return 0;var a=Math.log(z/minZ)/Math.log(maxZ/minZ);return Math.max(0,Math.min(1,a));}
+  var NICE=[1,2,5,10,20,25,50,100,200,250,500,1000];var bt=null;
+  /* 보이는 때(축척 막대 기준): 나라 = 200km 이상(멀리서만) · 주요 = 500km 이하 · 보통 = 100km 이하 · 작은 = 점은 250km 이하, 이름은 25km 이하 */
+  function shown(kind,bar){return kind==="나라"?bar>=200:kind==="주요"||kind==="도시"?bar<=500:kind==="작은"?bar<=250:bar<=100;}
+  function textShown(kind,bar){return kind==="작은"?bar<=25:true;}
+  function drawRivers(bar){var it=item();rivers.forEach(function(r){var vis=bar<=250&&(r.open||document.body.classList.contains("nofog"));r.t.style.display=vis?"":"none";if(!vis)return;
+      var d="";r.path.forEach(function(q,i){var px=v.viewport.pixelFromPoint(it.imageToViewportCoordinates(q[0],q[1]),true);d+=(i?"L":"M")+px.x.toFixed(1)+" "+px.y.toFixed(1)});r.p.setAttribute("d",d);});}
+  /* 이름이 겹치면: 오른쪽 → 왼쪽 → 위 → 아래로 비켜 쓰고, 그래도 겹치면 이름만 감춘다(점은 늘 제자리) */
+  var SIDES=["","side-l","side-u","side-d"];
+  var RANK={"주요":0,"도시":0,"보통":1,"고을":1,"작은":2};
+  function declutter(){var placed=[],dots=[];
+    var live=labels.filter(function(l){return l.el.classList.contains("pin")&&!l.el.classList.contains("off")&&!l.el.classList.contains("fogged")})
+      .sort(function(a,b){return (RANK[a.kind]||1)-(RANK[b.kind]||1)||(b.ep||0)-(a.ep||0)||labels.indexOf(b)-labels.indexOf(a)});
+    /* 점끼리 겹치면 덜 중요한 점을 감춘다 */
+    live=live.filter(function(l){l.el.classList.remove("hidedot");var r=l.el.querySelector(".dot").getBoundingClientRect();
+      if(dots.some(function(q){return Math.hypot(q.x-r.x,q.y-r.y)<9})){l.el.classList.add("hidedot");return false}dots.push(r);placed.push(r);return true});
+    live.filter(function(l){return !l.el.classList.contains("notext")})
+      .forEach(function(l){var e=l.el,ok=false;e.classList.remove("crowd");
+        for(var i=0;i<SIDES.length&&!ok;i++){SIDES.forEach(function(c){if(c)e.classList.remove(c)});if(SIDES[i])e.classList.add(SIDES[i]);
+          var r=e.querySelector(".t").getBoundingClientRect();
+          ok=!placed.some(function(q){return r.left<q.right+2&&r.right>q.left-2&&r.top<q.bottom+1&&r.bottom>q.top-1});
+          if(ok)placed.push(r);}
+        if(!ok){SIDES.forEach(function(c){if(c)e.classList.remove(c)});e.classList.add("crowd");}
+      });}
+  function upd(show){if(!minZ)return;
+    var z=v.viewport.getZoom(true),fit=MAKER?minZ/0.35:minZ,rel=z/fit;
+    var sc=item().viewportToImageZoom(z),kmPx=KM/sc;
+    var target=120*kmPx,best=NICE[0];NICE.forEach(function(n){if(n<=target)best=n});
+    labels.forEach(function(l){l.el.classList.toggle("off",!shown(l.kind,best));l.el.classList.toggle("notext",!textShown(l.kind,best))});
+    drawRivers(best);
+    declutter();
+    document.getElementById("sbar").style.width=Math.round(best/kmPx)+"px";
+    document.getElementById("stxt").textContent=best+"km";
+    var p=pos(z);thumb.style.top=((1-p)*100)+"%";tfill.style.height=(p*100)+"%";track.setAttribute("aria-valuenow",rel.toFixed(1));
+    if(show){badge.innerHTML="×"+rel.toFixed(1)+"<small>막대 "+best+"km</small>";badge.classList.add("on");scaleEl.classList.add("flash");
+      clearTimeout(bt);bt=setTimeout(function(){badge.classList.remove("on");scaleEl.classList.remove("flash")},1100);}
+  }
+  v.addHandler("zoom",function(){upd(true)});v.addHandler("animation",function(){upd(false)});v.addHandler("resize",function(){if(storyView&&!viewDone&&!touched)viewDone=storyView();upd(false)});v.addHandler("update-viewport",function(){upd(false)});
+  function zoomTo(z){v.viewport.zoomTo(Math.max(minZ,Math.min(maxZ,z)));}
+  document.getElementById("zin").onclick=function(){zoomTo(v.viewport.getZoom()*1.6)};
+  document.getElementById("zout").onclick=function(){zoomTo(v.viewport.getZoom()/1.6)};
+  document.getElementById("home").onclick=function(){v.viewport.goHome()};
+  function fromTrack(e){var r=track.getBoundingClientRect(),p=1-Math.max(0,Math.min(1,(e.clientY-r.top)/r.height));zoomTo(minZ*Math.pow(maxZ/minZ,p));}
+  var drag=false;track.addEventListener("pointerdown",function(e){drag=true;track.setPointerCapture(e.pointerId);fromTrack(e)});
+  track.addEventListener("pointermove",function(e){if(drag)fromTrack(e)});track.addEventListener("pointerup",function(){drag=false});
+  track.addEventListener("keydown",function(e){if(e.key==="ArrowUp")zoomTo(v.viewport.getZoom()*1.25);if(e.key==="ArrowDown")zoomTo(v.viewport.getZoom()/1.25)});
+  if(MAKER){var fb=document.createElement("div");fb.className="fogbtn";fb.innerHTML='<button type="button" class="btn">안개 끄기</button>';document.body.appendChild(fb);
+    fb.firstChild.onclick=function(){if(!fogItem)return;var on=fogItem.getOpacity()>0;fogItem.setOpacity(on?0:1);document.body.classList.toggle("nofog",on);this.textContent=on?"안개 켜기":"안개 끄기";upd(false);};}
+  var hint=document.getElementById("hint");setTimeout(function(){hint.classList.add("gone")},3500);
+  v.addHandler("canvas-drag",function(){touched=true;hint.classList.add("gone")});v.addHandler("canvas-scroll",function(){touched=true});v.addHandler("canvas-pinch",function(){touched=true});
+})();
+</script>
+</body>
+</html>

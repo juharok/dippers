@@ -1,0 +1,48 @@
+# 공유용 파일 「신화계 지도(공개)」의 슬라이드(샛뭍)를 한 시간마다 가져와 satmut.jpg를 새로 고친다.
+# 슬라이드가 바뀌었을 때만 커밋한다. Actions 탭에서 "Run workflow"를 누르면 바로 돌릴 수도 있다.
+name: map-sync
+on:
+  # 2026-11-19 꺼 둠: 샛뭍 지명·지도의 정본은 저장소(map/)로 옮겼다(결정 로그 「샛뭍 지명의 정본」 A). 필요하면 Actions 탭에서 손으로 돌린다.
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: map-sync
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 슬라이드 내려받기
+        run: |
+          curl -fsSL -o slide.png "https://docs.google.com/presentation/d/1XcIL6IQvOh7EoiIyb57Z3O9MAlCzpnyyvO9ApQqM5ZI/export/png"
+      - name: 정사각형으로 잘라 satmut.jpg 만들기
+        run: |
+          pip install -q pillow
+          python3 - <<'PY'
+          import hashlib, os
+          from PIL import Image
+          im = Image.open("slide.png").convert("RGB")
+          W, H = im.size
+          x0 = round(H * 0.4244)
+          sq = im.crop((x0, 0, x0 + H, H))
+          h = hashlib.sha1(sq.tobytes()).hexdigest()
+          old = open(".map-hash").read().strip() if os.path.exists(".map-hash") else ""
+          if h != old:
+              if sq.size[0] < 1600:
+                  sq = sq.resize((1600, 1600), Image.LANCZOS)
+              sq.save("satmut.jpg", quality=88, optimize=True)
+              open(".map-hash", "w").write(h + "\n")
+              print("changed", sq.size)
+          else:
+              print("same")
+          PY
+          rm -f slide.png
+      - name: 바뀌었으면 올리기
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name "dippers-map-bot"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add satmut.jpg .map-hash
+            git commit -m "지도: 슬라이드 변경 반영"
+            git push
+          fi

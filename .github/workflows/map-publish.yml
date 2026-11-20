@@ -1,0 +1,54 @@
+# 노션 「작품 · Works」 신살 행의 「지도」 숫자(공개할 마지막 화)를 읽어,
+# 비공개 장부(dippers-world)에서 그 화까지 나온 장소만 공개 지도(map/names.json)에 넣는다.
+# 5분마다 돌고, Actions 탭에서 「Run workflow」로 바로 돌릴 수도 있다.
+# 필요한 비밀 값(Settings → Secrets and variables → Actions): NOTION_TOKEN, WORLD_READ_TOKEN
+name: map-publish
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # 5분마다(깃허브 최소 간격, 실제로는 몇 분 늦을 수 있음)
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: map-publish
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 노션에서 「지도」 숫자 읽기
+        id: notion
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+        run: |
+          if [ -z "$NOTION_TOKEN" ]; then echo "NOTION_TOKEN이 아직 없어 건너뜁니다"; echo "ready=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          curl -fsS https://api.notion.com/v1/pages/3421cbf522bb8072ab3ef9f9156d22e3 \
+            -H "Authorization: Bearer $NOTION_TOKEN" -H "Notion-Version: 2022-06-28" -o page.json
+          N=$(python3 -c "import json;p=json.load(open('page.json'))['properties'].get('지도') or {};print(p.get('number') if p.get('number') is not None else '')")
+          rm -f page.json
+          echo "upto=$N" >> "$GITHUB_OUTPUT"
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+          echo "공개할 마지막 화: ${N:-비어 있음}"
+      - name: 비공개 장부 받기
+        if: steps.notion.outputs.ready == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: juhayeum-maker/dippers-world
+          token: ${{ secrets.WORLD_READ_TOKEN }}
+          path: _world
+          sparse-checkout: map
+      - name: 연재된 화까지만 공개 지도에 넣기
+        if: steps.notion.outputs.ready == 'true'
+        run: |
+          pip install -q pyyaml
+          python3 map/tools/publish_names.py _world/map/ledger.yaml _world/map/positions.yaml map/names.json "${{ steps.notion.outputs.upto }}"
+          rm -rf _world
+      - name: 바뀌었으면 올리기
+        if: steps.notion.outputs.ready == 'true'
+        run: |
+          if [ -n "$(git status --porcelain map/names.json)" ]; then
+            git config user.name "dippers-map-bot"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add map/names.json
+            git commit -m "지도 공개 범위 갱신(노션 「지도」 ${{ steps.notion.outputs.upto }}화)"
+            git push
+          fi
