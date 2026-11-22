@@ -1663,25 +1663,33 @@ window.DGB_FORM=window.DGB_FORM||{form:"1FAIpQLSeF6YXFrMYywiyO2jHp8I-fafDAWqvNkb
   var C=window.DGB_FORM,list=document.getElementById("gb-list"),form=document.getElementById("gb-form"),stat=document.getElementById("gb-stat"),nick=document.getElementById("gb-nick"),msg=document.getElementById("gb-msg"),cnt=document.getElementById("gb-count");
   if(!(C.form&&C.nick&&C.msg&&C.sheet)){form.hidden=true;stat.textContent="방명록은 곧 열립니다.";return;}
   form.hidden=false;stat.textContent="";
-  var AK="";try{AK=localStorage.getItem("dippers-author")||"";}catch(x){}
+  var TOMB="⌫지움:";var AK="";try{AK=localStorage.getItem("dippers-author")||"";}catch(x){}
   if(/^#(%EC%9E%91%EA%B0%80|작가)$/.test(location.hash)){var pw=prompt(AK?"이 기기는 작가 기기입니다. 새 암호를 넣거나, 비워 두고 확인을 누르면 등록을 풉니다.":"작가 암호를 넣어 주세요. 이 기기에만 저장됩니다.");
     if(pw!==null){try{if(pw.trim()){localStorage.setItem("dippers-author",pw.trim());AK=pw.trim();alert("이 기기를 작가 기기로 등록했습니다.");}else{localStorage.removeItem("dippers-author");AK="";alert("작가 기기 등록을 풀었습니다.");}}catch(x){}}
     history.replaceState(null,"",location.pathname+location.search);}
   var ZZ="子丑寅卯辰巳午未申酉戌亥";
   function mark(d){return ZZ[Math.floor(((d.getHours()+1)%24)/2)];}
   function day(d){return d.getFullYear()+"."+(d.getMonth()+1)+"."+d.getDate();}
-  function item(n,t,d,own){var el=document.createElement("article");el.className="gb-item"+(own?" gb-owner":"");
+  function item(n,t,d,own,id){var el=document.createElement("article");el.className="gb-item"+(own?" gb-owner":"");
     el.innerHTML='<div class="gb-top"><span class="gb-zz han"></span><b></b><time></time></div><p></p>';
-    el.querySelector(".gb-zz").textContent=mark(d);el.querySelector("b").textContent=n||"이름 없는 길손";el.querySelector("time").textContent=day(d);el.querySelector("p").textContent=t;if(own){var k=document.createElement("span");k.className="gb-badge";k.textContent="작가";el.querySelector("b").after(k);}return el;}
+    el.querySelector(".gb-zz").textContent=mark(d);el.querySelector("b").textContent=n||"이름 없는 길손";el.querySelector("time").textContent=day(d);el.querySelector("p").textContent=t;if(own){var k=document.createElement("span");k.className="gb-badge";k.textContent="작가";el.querySelector("b").after(k);}
+    if(AK&&C.script&&id){var x=document.createElement("button");x.type="button";x.className="gb-del";x.textContent="지우기";x.addEventListener("click",function(){if(!confirm("이 글을 지울까요?"))return;x.disabled=true;
+      var fd=new URLSearchParams();fd.append("nick","");fd.append("msg",TOMB+id);fd.append("key",AK);
+      fetch(C.script,{method:"POST",mode:"no-cors",body:fd}).then(function(){el.remove();if(!list.querySelector(".gb-item"))list.innerHTML='<p class="gb-empty">아직 아무도 다녀가지 않았다. 첫 발자국을 남겨 보라.</p>';},function(){x.disabled=false;stat.textContent="지우지 못했습니다. 잠시 뒤 다시 해 주세요.";});});
+      el.querySelector("time").after(x);}
+    return el;}
   function load(){var cb="__gb"+Date.now(),s=document.createElement("script");
     window[cb]=function(res){delete window[cb];s.remove();list.innerHTML="";
       var rows=(res&&res.table&&res.table.rows)||[];
       if(!rows.length){list.innerHTML='<p class="gb-empty">아직 아무도 다녀가지 않았다. 첫 발자국을 남겨 보라.</p>';return;}
-      rows.forEach(function(r){var c=r.c||[],v=c[0]&&c[0].v,d=new Date();if(v==="타임스탬프")return;
+      var gone={};rows.forEach(function(r){var c=r.c||[],t=c[2]&&c[2].v;if(c[3]&&c[3].v&&typeof t==="string"&&t.indexOf(TOMB)===0)gone[t.slice(TOMB.length)]=1;});
+      var shown=0;rows.forEach(function(r){var c=r.c||[],v=c[0]&&c[0].v,d=new Date();if(v==="타임스탬프")return;var own=!!(c[3]&&c[3].v),id=String(v)+"|"+((c[1]&&c[1].v)||"");
+        if(own&&typeof (c[2]&&c[2].v)==="string"&&c[2].v.indexOf(TOMB)===0)return;if(gone[id]||shown>=60)return;
         var m=/Date\((\d+),(\d+),(\d+),?(\d+)?,?(\d+)?,?(\d+)?\)/.exec(v||"");if(m)d=new Date(+m[1],+m[2],+m[3],+(m[4]||0),+(m[5]||0),+(m[6]||0));
-        var t=c[2]&&c[2].v;if(t)list.appendChild(item(c[1]&&c[1].v,String(t),d,!!(c[3]&&c[3].v)));});};
+        var t=c[2]&&c[2].v;if(t){shown++;list.appendChild(item(c[1]&&c[1].v,String(t),d,own,id));}});
+      if(!shown)list.innerHTML='<p class="gb-empty">아직 아무도 다녀가지 않았다. 첫 발자국을 남겨 보라.</p>';};
     s.onerror=function(){stat.textContent="방명록을 불러오지 못했습니다.";};
-    s.src="https://docs.google.com/spreadsheets/d/"+C.sheet+"/gviz/tq?headers=1&tqx=responseHandler:"+cb+"&tq="+encodeURIComponent("select A,B,C,D where C is not null order by A desc limit 60");
+    s.src="https://docs.google.com/spreadsheets/d/"+C.sheet+"/gviz/tq?headers=1&tqx=responseHandler:"+cb+"&tq="+encodeURIComponent("select A,B,C,D where C is not null order by A desc limit 400");
     document.body.appendChild(s);}
   msg.addEventListener("input",function(){cnt.textContent=msg.value.length+" / 200"});
   form.addEventListener("submit",function(e){e.preventDefault();var t=msg.value.trim(),n=nick.value.trim().slice(0,16);if(!t)return;
@@ -1689,7 +1697,7 @@ window.DGB_FORM=window.DGB_FORM||{form:"1FAIpQLSeF6YXFrMYywiyO2jHp8I-fafDAWqvNkb
     if(own){url=C.script;fd.append("nick",n);fd.append("msg",t.slice(0,200));fd.append("key",AK);}
     else{url="https://docs.google.com/forms/d/e/"+C.form+"/formResponse";fd.append("entry."+C.nick,n);fd.append("entry."+C.msg,t.slice(0,200));}
     fetch(url,{method:"POST",mode:"no-cors",body:fd}).then(function(){
-      var e2=list.querySelector(".gb-empty");if(e2)e2.remove();list.insertBefore(item(n,t,new Date(),own),list.firstChild);msg.value="";cnt.textContent="0 / 200";b.disabled=false;
+      var e2=list.querySelector(".gb-empty");if(e2)e2.remove();list.insertBefore(item(n,t,new Date(),own),list.firstChild);if(own)setTimeout(load,3000);msg.value="";cnt.textContent="0 / 200";b.disabled=false;
       try{localStorage.setItem("dippers-nick",n)}catch(x){}
     },function(){stat.textContent="남기지 못했습니다. 잠시 뒤 다시 시도해 주세요.";b.disabled=false;});});
   try{var sv=localStorage.getItem("dippers-nick");if(sv)nick.value=sv;}catch(x){}
