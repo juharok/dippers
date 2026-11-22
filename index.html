@@ -928,7 +928,7 @@ a.wcard,a.wl{border-color:color-mix(in srgb,var(--gold) 50%,var(--line))}
     <p>칠성록을 쓰는 사람. 일곱 별이 쏟아지는 세계를 한 편씩 적어 나간다.</p>
     <div class="links">
       <a href="https://library.munpia.com/directory" target="_blank" rel="noopener" aria-label="문피아 서재" title="문피아 서재"><svg viewBox="0 0 24 24"><path d="M4 5h5a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H4z"/><path d="M20 5h-5a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h6z"/></svg></a>
-      <a href="https://www.instagram.com/juharok/" target="_blank" rel="noopener" aria-label="인스타그램 @juharok" title="인스타그램"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4.5"/><circle cx="12" cy="12" r="3.6"/><circle cx="16.8" cy="7.2" r="1" fill="currentColor" stroke="none"/></svg></a>
+      <a hidden href="https://www.instagram.com/juharok/" target="_blank" rel="noopener" aria-label="인스타그램 @juharok" title="인스타그램"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4.5"/><circle cx="12" cy="12" r="3.6"/><circle cx="16.8" cy="7.2" r="1" fill="currentColor" stroke="none"/></svg></a>
     </div>
   </div>
 </div>
@@ -1169,7 +1169,7 @@ function DSHELF(root,S,onOpen){
     ltiles.forEach(function(t){t[0].setAttribute("aria-pressed",t[0]===b?"true":"false")});
     var d=$("ldetail");
     if(L.open)d.innerHTML='<h3>주작</h3><p class="sym">남 · 여름 · 적 · 火</p><p>세 개의 땅덩어리. 활화산 줄기와 붉은 흙의 고원, 들쭉날쭉한 포구와 섬 무리. 이곳 사람들에게 천하는 곧 주작의 세 땅이다.</p>'+
-      '<dl><dt>하늘</dt><dd>비 많은 해양성 기후, 장마와 태풍</dd><dt>생업</dt><dd>수산 · 원양어업 · 염전</dd><dt>체제</dt><dd>포구마다 선 군장국가</dd><dt>문화</dt><dd>고유어와 사투리, 바다와 불의 굿</dd><dt>경계</dt><dd>서쪽 끝 삼포자 ▲</dd></dl>';
+      '<dl><dt>하늘</dt><dd>비 많은 해양성 기후, 장마와 태풍</dd><dt>생업</dt><dd>수산 · 원양어업 · 염전</dd><dt>체제</dt><dd>포구마다 선 군장국가</dd><dt>문화</dt><dd>고유어와 사투리, 바다와 불의 굿</dd><dt>경계</dt><dd>서쪽 끝 삼포자</dd></dl>';
     else d.innerHTML='<h3>'+(L.hw?HW:L.nm)+'</h3><p class="sym">'+L.dir+' · '+L.el+'</p><p class="hush">'+L.hush+'</p>';
     fill(d);
   }
