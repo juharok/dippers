@@ -1555,7 +1555,6 @@ window.DSHARE=(function(){
   f.addEventListener("submit",function(e){e.preventDefault();run()});
   var mm=/^#saju-(\d{4})(\d{2})(\d{2})-(x|(\d{2})(\d{2}))$/.exec(location.hash);
   if(mm){di.value=mm[1]+"-"+mm[2]+"-"+mm[3];if(mm[4]==="x"){un.checked=true;ti.disabled=true;}else ti.value=mm[5]+":"+mm[6];run();if(window.DSajuOpen)window.DSajuOpen();}
-  else{var n=new Date();if(!di.value){di.value=n.getFullYear()+"-"+p2(n.getMonth()+1)+"-"+p2(n.getDate());ti.value=p2(n.getHours())+":"+p2(n.getMinutes());run("예시 · 지금 이 순간 태어난 아이의 풀이입니다. 생년월일시를 넣고 가호 보기를 누르세요.");}else run();}
   window.DSaju={calc:calc};
 })();
 </script>
