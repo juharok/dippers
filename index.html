@@ -1312,7 +1312,7 @@ var DGUARD=(function(){
 window.DKAKAO_KEY="c859eb75f3c1004c7c66188689b0f296";
 /* 공유 공통: 모든 링크는 정식 사이트로. 휴대폰은 바로 공유 시트, PC는 복사·저장. */
 window.DSHARE=(function(){
-  var SITE="https://juhayeum-maker.github.io/dippers/";
+  var SITE=(/^https?:$/.test(location.protocol)&&!/claude/.test(location.hostname))?location.origin+location.pathname.replace(/[^/]*$/,""):"https://juhayeum-maker.github.io/dippers/";
   var KEY=window.DKAKAO_KEY||"";
   function mobile(){return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Macintosh/.test(navigator.userAgent));}
   function copy(s){try{if(navigator.clipboard&&window.isSecureContext)return navigator.clipboard.writeText(s);}catch(x){}
