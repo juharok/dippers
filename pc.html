@@ -564,6 +564,7 @@ footer .big{background:linear-gradient(100deg,var(--ink) 0 40%,var(--gold) 50%,v
 .gb-top time{margin-left:auto}
 .gb-del{font-family:var(--f-ui);font-size:11px;color:var(--muted);background:none;border:1px solid var(--line);border-radius:999px;padding:1px 8px;cursor:pointer}
 .gb-item p{font-size:16px;line-height:1.7;overflow-wrap:anywhere}
+.gb-owner{box-shadow:inset 0 0 0 1.5px var(--gold);background:color-mix(in srgb,var(--gold) 7%,var(--bg))}.gb-badge{font-family:var(--f-ui);font-size:11px;font-weight:600;color:var(--bg);background:var(--gold);border-radius:999px;padding:1px 8px;align-self:center}
 .gb-empty{padding:28px;text-align:center;color:var(--muted);background:var(--bg);font-size:15px}
 .gb-terms{font-family:var(--f-ui);font-size:13px;color:var(--muted)}
 .gb-terms summary{cursor:pointer;color:var(--ink)}
@@ -1945,18 +1946,18 @@ window.DGB_FORM=window.DGB_FORM||{form:"1FAIpQLSeF6YXFrMYywiyO2jHp8I-fafDAWqvNkb
   var ZZ="子丑寅卯辰巳午未申酉戌亥";
   function mark(d){return ZZ[Math.floor(((d.getHours()+1)%24)/2)];}
   function day(d){return d.getFullYear()+"."+(d.getMonth()+1)+"."+d.getDate();}
-  function item(n,t,d){var el=document.createElement("article");el.className="gb-item";
+  function item(n,t,d,own){var el=document.createElement("article");el.className="gb-item"+(own?" gb-owner":"");
     el.innerHTML='<div class="gb-top"><span class="gb-zz han"></span><b></b><time></time></div><p></p>';
-    el.querySelector(".gb-zz").textContent=mark(d);el.querySelector("b").textContent=n||"이름 없는 길손";el.querySelector("time").textContent=day(d);el.querySelector("p").textContent=t;return el;}
+    el.querySelector(".gb-zz").textContent=mark(d);el.querySelector("b").textContent=n||"이름 없는 길손";el.querySelector("time").textContent=day(d);el.querySelector("p").textContent=t;if(own){var k=document.createElement("span");k.className="gb-badge";k.textContent="작가";el.querySelector("b").after(k);}return el;}
   function load(){var cb="__gb"+Date.now(),s=document.createElement("script");
     window[cb]=function(res){delete window[cb];s.remove();list.innerHTML="";
       var rows=(res&&res.table&&res.table.rows)||[];
       if(!rows.length){list.innerHTML='<p class="gb-empty">아직 아무도 다녀가지 않았다. 첫 발자국을 남겨 보라.</p>';return;}
       rows.forEach(function(r){var c=r.c||[],v=c[0]&&c[0].v,d=new Date();if(v==="타임스탬프")return;
         var m=/Date\((\d+),(\d+),(\d+),?(\d+)?,?(\d+)?,?(\d+)?\)/.exec(v||"");if(m)d=new Date(+m[1],+m[2],+m[3],+(m[4]||0),+(m[5]||0),+(m[6]||0));
-        var t=c[2]&&c[2].v;if(t)list.appendChild(item(c[1]&&c[1].v,String(t),d));});};
+        var t=c[2]&&c[2].v;if(t)list.appendChild(item(c[1]&&c[1].v,String(t),d,!!(c[3]&&c[3].v)));});};
     s.onerror=function(){stat.textContent="방명록을 불러오지 못했습니다.";};
-    s.src="https://docs.google.com/spreadsheets/d/"+C.sheet+"/gviz/tq?headers=1&tqx=responseHandler:"+cb+"&tq="+encodeURIComponent("select A,B,C where C is not null order by A desc limit 60");
+    s.src="https://docs.google.com/spreadsheets/d/"+C.sheet+"/gviz/tq?headers=1&tqx=responseHandler:"+cb+"&tq="+encodeURIComponent("select A,B,C,D where C is not null order by A desc limit 60");
     document.body.appendChild(s);}
   msg.addEventListener("input",function(){cnt.textContent=msg.value.length+" / 200"});
   form.addEventListener("submit",function(e){e.preventDefault();var t=msg.value.trim(),n=nick.value.trim().slice(0,16);if(!t)return;
