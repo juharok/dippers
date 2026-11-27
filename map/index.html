@@ -150,7 +150,7 @@ body.nofog .pin.fogged{visibility:visible!important}
     (DATA.rivers||[]).forEach(function(rv,i){var p=document.createElementNS("http://www.w3.org/2000/svg","path");p.id="rp"+i;p.setAttribute("fill","none");
       var t=document.createElementNS("http://www.w3.org/2000/svg","text"),tp=document.createElementNS("http://www.w3.org/2000/svg","textPath");
       tp.setAttribute("href","#rp"+i);tp.setAttribute("startOffset","50%");tp.setAttribute("text-anchor","middle");tp.textContent=rv.name;t.appendChild(tp);RL.appendChild(p);RL.appendChild(t);
-      rivers.push({p:p,t:t,path:rv.path,open:rv.path.some(function(q){return inOpen(q[0],q[1])})});});
+      rivers.push({p:p,t:t,path:rv.path,name:rv.name,open:rv.path.some(function(q){return inOpen(q[0],q[1])})});});
     /* 처음 보는 자리: 지금 이야기가 지나는 곳(공개된 마지막 화의 장소들)을 막대 100km 크기로 */
     var last=story.length?Math.max.apply(null,story.map(function(n){return n.ep||0})):0,here=story.filter(function(n){return (n.ep||0)===last});
     if(here.length){var cx=here.reduce(function(a,n){return a+n.x},0)/here.length,cy=here.reduce(function(a,n){return a+n.y},0)/here.length;
@@ -167,7 +167,24 @@ body.nofog .pin.fogged{visibility:visible!important}
   function shown(kind,bar){return kind==="나라"?bar>=200:kind==="주요"||kind==="도시"?bar<=500:kind==="작은"?bar<=250:bar<=100;}
   function textShown(kind,bar){return kind==="작은"?bar<=25:true;}
   function drawRivers(bar){var it=item();rivers.forEach(function(r){var vis=bar<=250&&(r.open||document.body.classList.contains("nofog"));r.t.style.display=vis?"":"none";if(!vis)return;
-      var d="";r.path.forEach(function(q,i){var px=v.viewport.pixelFromPoint(it.imageToViewportCoordinates(q[0],q[1]),true);d+=(i?"L":"M")+px.x.toFixed(1)+" "+px.y.toFixed(1)});r.p.setAttribute("d",d);});}
+      var d="",P=[];r.path.forEach(function(q,i){var px=v.viewport.pixelFromPoint(it.imageToViewportCoordinates(q[0],q[1]),true);P.push(px);d+=(i?"L":"M")+px.x.toFixed(1)+" "+px.y.toFixed(1)});r.p.setAttribute("d",d);
+      placeRiver(r,P);});}
+  /* 강 이름 자리: 화면 안·안개 밖의 강 위에서, 마을 점·이름과 떨어진 곳 중 화면 가운데에 가장 가까운 곳(글씨는 늘 물줄기 위) */
+  function placeRiver(r,P){var W=innerWidth,H=innerHeight,cum=[0],i;for(i=1;i<P.length;i++)cum.push(cum[i-1]+Math.hypot(P[i].x-P[i-1].x,P[i].y-P[i-1].y));
+    var L=cum[cum.length-1],half=(r.name.length*15+10)/2;if(L<half*2){r.t.style.display="none";return;}
+    function at(sv){var j=1;while(j<cum.length-1&&cum[j]<sv)j++;var f=(sv-cum[j-1])/Math.max(1e-6,cum[j]-cum[j-1]);return {x:P[j-1].x+(P[j].x-P[j-1].x)*f,y:P[j-1].y+(P[j].y-P[j-1].y)*f,k:j-1+f};}
+    var obs=[];labels.forEach(function(l){if(!l.el.classList.contains("pin")||l.el.classList.contains("off")||l.el.classList.contains("fogged"))return;
+      var dr=l.el.querySelector(".dot").getBoundingClientRect();obs.push({l:dr.left-10,r:dr.right+10,t:dr.top-10,b:dr.bottom+10});
+      if(!l.el.classList.contains("notext")){var tr=l.el.querySelector(".t").getBoundingClientRect();obs.push({l:tr.left-4,r:tr.right+4,t:tr.top-4,b:tr.bottom+4});}});
+    var best=null,bestAny=null,step=Math.max(8,L/400);
+    for(var sv=half;sv<=L-half;sv+=step){var ok=true,clear=true;
+      for(var u=-half;u<=half;u+=8){var q=at(sv+u);if(q.x<20||q.y<20||q.x>W-20||q.y>H-20){ok=false;break;}
+        var k=Math.floor(q.k),qq=r.path[Math.min(k,r.path.length-1)];if(!inOpen(qq[0],qq[1])&&!document.body.classList.contains("nofog")){ok=false;break;}
+        if(clear&&obs.some(function(o){return q.x>o.l-24&&q.x<o.r+24&&q.y>o.t-12&&q.y<o.b+12}))clear=false;}
+      if(!ok)continue;var c=at(sv),dc=Math.hypot(c.x-W/2,c.y-H/2);
+      if(clear&&(!best||dc<best.d))best={s:sv,d:dc};if(!bestAny||dc<bestAny.d)bestAny={s:sv,d:dc};}
+    var pick=best||bestAny;if(!pick){r.t.style.display="none";return;}
+    r.t.firstChild.setAttribute("startOffset",pick.s.toFixed(1));}
   /* 이름이 겹치면: 오른쪽 → 왼쪽 → 위 → 아래로 비켜 쓰고, 그래도 겹치면 이름만 감춘다(점은 늘 제자리) */
   var SIDES=["","side-l","side-u","side-d"];
   var RANK={"주요":0,"도시":0,"보통":1,"고을":1,"작은":2};
@@ -190,8 +207,8 @@ body.nofog .pin.fogged{visibility:visible!important}
     var sc=item().viewportToImageZoom(z),kmPx=KM/sc;
     var target=120*kmPx,best=NICE[0];NICE.forEach(function(n){if(n<=target)best=n});
     labels.forEach(function(l){l.el.classList.toggle("off",!shown(l.kind,best));l.el.classList.toggle("notext",!textShown(l.kind,best))});
-    drawRivers(best);
     declutter();
+    drawRivers(best);
     document.getElementById("sbar").style.width=Math.round(best/kmPx)+"px";
     document.getElementById("stxt").textContent=best+"km";
     var p=pos(z);thumb.style.top=((1-p)*100)+"%";tfill.style.height=(p*100)+"%";track.setAttribute("aria-valuenow",rel.toFixed(1));
