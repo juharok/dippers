@@ -1,0 +1,38 @@
+# 사이트 점검: 하루 한 번, 그리고 올릴 때마다.
+# 1) 페이지 안의 스크립트에 문법 오류가 없는지(오류가 있으면 앱이 열리지 않는다)
+# 2) 실제 주소에서 앱·웹·지도·설치 파일이 열리는지
+# 실패하면 Actions 탭에 빨간 X가 뜨고 깃허브가 알림 메일을 보낸다.
+name: site-check
+on:
+  schedule:
+    - cron: "17 21 * * *"   # 매일 한국 시각 06:17
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 스크립트 문법 검사
+        run: |
+          node -e '
+          const fs=require("fs");let bad=0;
+          for(const f of ["index.html","pc.html","map/index.html"]){
+            const s=fs.readFileSync(f,"utf8");const re=/<script>([\s\S]*?)<\/script>/g;let m,i=0;
+            while((m=re.exec(s))){i++;try{new Function(m[1])}catch(e){bad++;console.log("✗",f,"스크립트",i,e.message)}}
+            console.log("✓",f,i,"개");}
+          for(const f of ["manifest.webmanifest","map/names.json"]){try{JSON.parse(fs.readFileSync(f,"utf8"));console.log("✓",f)}catch(e){bad++;console.log("✗",f,e.message)}}
+          process.exit(bad?1:0);'
+      - name: 실제 주소 열어 보기
+        if: github.event_name != 'push'
+        run: |
+          B="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/"
+          bad=0
+          for p in "" "index.html?app" "pc.html" "map/" "map/names.json" "manifest.webmanifest" "sw.js" "map/satmut.dzi"; do
+            c=$(curl -s -o /dev/null -w "%{http_code}" --retry 3 --retry-delay 10 "$B$p")
+            if [ "$c" = "200" ]; then echo "✓ $c $B$p"; else echo "✗ $c $B$p"; bad=1; fi
+          done
+          exit $bad
